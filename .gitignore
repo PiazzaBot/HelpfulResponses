@@ -1,1 +1,4 @@
 *.txt
+*.json
+*.csv
+piazza-api
