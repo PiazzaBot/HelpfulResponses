@@ -171,12 +171,12 @@ def json_to_csv(json_file_path: str, csv_filename: str, is_overwrite_csv=False):
                     if student_answer:
                         s_row = [student_answer['text'], student_answer['poster'], student_answer['date'], str(student_answer['num_helpful'])] 
                     else:
-                        s_row = ['None', 'None', 'None', 'None']
+                        s_row = [None, None, None, None]
 
                     if instructor_answer:
                         i_row = [instructor_answer['text'], instructor_answer['poster'], instructor_answer['date'], str(instructor_answer['num_helpful'])] 
                     else:
-                        i_row = ['None', 'None', 'None', 'None']
+                        i_row = [None, None, None, None]
                     
                     row = row + s_row + i_row
 
@@ -200,7 +200,8 @@ def json_to_csv(json_file_path: str, csv_filename: str, is_overwrite_csv=False):
 
 def main():
     """
-    How to handle posts with imgs? Do we want the img tags stripped?
+    How to handle posts with imgs? Do we want the img tags stripped? Think about how it will affect textual features
+        response length, sentiment, ...
     """
     #user_profile,course = login()
     #export_posts_json("csc108_fall2021.json", course)
