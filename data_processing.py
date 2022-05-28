@@ -18,6 +18,10 @@ from piazza_api.network import Network
 CRED_FILE = "creds.json"
 
 
+"""Custom Types"""
+Answer = Dict[str,Dict[str,Union[str,int]]]
+Post = Dict[str,Union[str, Union[str,int,List]]]
+
 
 class MyHTMLParser(HTMLParser):
     """taken from: [1]"""
@@ -73,15 +77,17 @@ def get_post_creator(post):
         if entry['type'] == 'create':
             return entry['uid']
 
+
 def get_post_created(post):
+    """get time post was created"""
     for entry in post['change_log']:
         if entry['type'] == 'create':
             return entry['when']
 
 
-def get_posts_by_student(student_id):
+def get_posts_by_student(filename:str, student_id):
     student_posts = []
-    with open('csc108_fall2021_json.txt', 'r') as f:
+    with open(filename, 'r') as f:
         all_posts = json.load(f)
         for p in all_posts:
             if get_post_creator(p) == student_id:
@@ -108,9 +114,7 @@ def export_posts_json(filename:str, course:Network) -> None:
         with open(filename, 'w') as f:
             json.dump(all_posts, f)
 
-"""Custom Types"""
-Answer = Dict[str,Dict[str,Union[str,int]]]
-Post = Dict[str,Union[str, Union[str,int,List]]]
+
 
 def get_answers(post:Post) -> Answer:
     """ Get student and instructor answers
@@ -202,6 +206,13 @@ def main():
     """
     How to handle posts with imgs? Do we want the img tags stripped? Think about how it will affect textual features
         response length, sentiment, ...
+
+        what elements do q&a contain?
+            latex, code snippets, imgs/screenshots, links, lists, annotations to prev posts (i.e. @356)
+
+        fields that can be added: num_answer_imgs, ...
+
+        can remove posts with imgs or include a special field called "num_imgs" so can distinguish b/w posts that have imgs
     """
     #user_profile,course = login()
     #export_posts_json("csc108_fall2021.json", course)
