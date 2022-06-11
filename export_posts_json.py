@@ -9,40 +9,8 @@ from copy import deepcopy
 import sys
 
 
-import csv
-import unicodedata
-import html
-from io import StringIO
-from html.parser import HTMLParser
-
-
-import pandas as pd
-from pandas import DataFrame, Series
-import numpy as np
-from numpy import ndarray 
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-
-
-from sklearn.feature_selection import SelectKBest
-from sklearn.feature_selection import mutual_info_classif
-from sklearn.feature_selection import chi2
-
-
-
-
 from nptyping import NDArray, Int, Shape
 from typing import Dict, List, Tuple, Union
-
-
-from transformers import pipeline
-from transformers import AutoModelForSequenceClassification
-from transformers import AutoTokenizer
-import nltk
-import ssl
-from nltk.tokenize import word_tokenize
-from collections import namedtuple
 
 
 from piazza_api import Piazza
