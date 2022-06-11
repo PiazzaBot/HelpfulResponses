@@ -57,6 +57,7 @@ from data_transform_utils import *
 
 
 DATASET_DIR = 'transform_csv/'
+IMG_DIR = 'imgs/'
 
 '''
 - train/val/test come from separate classes
@@ -85,12 +86,18 @@ can further use statistical tests to see if they improve performance
 class DataSet():
     """"""
     
-    def __init__(self, train, val, test, continuous_features):
+    def __init__(self, train, val, test, continuous_features, name):
+
+        self.name = name
+        self.dataset_save_path = DATASET_DIR + self.name + "/"
+        self.img_save_path = IMG_DIR + self.name + "/"
+
         self.train:DataFrame = train
         self.val:DataFrame = val
         self.test:DataFrame = test
         self.continuous_features:set = continuous_features
         self.discrete_features:set = set()
+
 
         self.features:list = train.keys()
         
@@ -99,7 +106,7 @@ class DataSet():
                 self.discrete_features.add(f)
 
 
-    def plot_discrete_distributions(self, set_type: str = 'train', hue=None, savePath=True) -> None:
+    def plot_discrete_distributions(self, set_type: str = 'train', hue=None, save_path=None) -> None:
         """
         :param hue: None, is_helpful, set where set indicates the type of dataset
         :param continuous_features: Set of features to exclude from the plot.
@@ -117,41 +124,24 @@ class DataSet():
         rows = tot // cols
         rows += tot % cols
 
-        #g = FacetGrid(dataset, sharex=False, sharey=False)
-
         fig, axs = plt.subplots(nrows=rows, ncols=cols)
-        fig.set_size_inches(15.5, 10.5)
-        #fig, axs = plt.subplots(1)
-
-
+        fig.set_size_inches(20, 20)
+     
         axs = axs.flatten()
-        #sns.displot(data=dataset, x=dataset['is_private'])
+        
 
         for idx, f in enumerate(self.discrete_features):
-            if f != 'is_helpful':
-                if hue:
-                    sns.histplot(dataset, x=f"{f}",  discrete=True, binwidth=1, hue=hue, ax=axs[idx])
-                    #g.map_dataframe(sns.histplot,  x=f"{f}",  discrete=True, binwidth=1, hue=hue)
-                    #grid:FacetGrid = sns.displot(data=dataset, x=f"{f}",  kind="hist", discrete=True, binwidth=1, hue=hue)
-                    #grid.savefig('tmp.png')
-                else:
-                    sns.histplot(dataset, x=f"{f}", discrete=True, binwidth=1, hue=hue, ax=axs[idx])
-                    #g.map_dataframe(sns.histplot,  x=f"{f}",  discrete=True, binwidth=1)
-             
+            if hue:
+                sns.histplot(dataset, x=f"{f}",  discrete=True, binwidth=1, hue=hue, ax=axs[idx])
+            else:
+                sns.histplot(dataset, x=f"{f}", discrete=True, binwidth=1, hue=hue, ax=axs[idx])
 
-        #g.savefig('tmp.png')
+        if save_path:
+            save_path += "_discrete"
+            print(f'saving to {save_path}')
+            fig.savefig(save_path)
 
-
-        # for idx, f in enumerate(self.discrete_features):
-        #     if hue:
-        #         sns.distplot(dataset[f], hue=hue, ax=axs[idx], kde=False)
-        #     else:
-        #         sns.distplot(dataset[f], ax=axs[idx], kde=False)
-
-        if savePath:
-            fig.savefig('save_as_a_png.png')
-
-    def plot_continuous_distributions(self, set_type: str = 'train', hue=None, savePath=None) -> None:
+    def plot_continuous_distributions(self, set_type: str = 'train', hue=None, save_path=None) -> None:
 
         if set_type == 'train':
             dataset = self.train
@@ -160,35 +150,63 @@ class DataSet():
         else:
             dataset = self.test
 
+
+        tot = 8
+        cols = 3
+        rows = tot // cols
+        rows += tot % cols
+
+        fig, axs = plt.subplots(nrows=rows, ncols=cols)
+        fig.set_size_inches(20, 20)
+     
+        axs = axs.flatten()
+
         a = np.arange(0, 200, 5)
         b = np.arange(0, 200, 1)
 
-        ax = sns.displot(data=dataset, x=f"response_time",  kind="hist", bins=a, hue=hue)
-        ax.set_xlabels('response time (mins) with binwidth=5')
+        ax = sns.histplot(data=dataset, x=f"response_time", bins=a, hue=hue, ax=axs[0])
+        #ax.set_xlabels('response time (mins) with binwidth=5')
 
-        ax=sns.displot(data=dataset, x=f"response_time",  kind="hist", bins=b,hue=hue)
-        ax.set_xlabels('response time (mins) with binwidth=1')
+        ax=sns.histplot(data=dataset, x=f"response_time", bins=b,hue=hue, ax=axs[1])
+        #ax.set_xlabels('response time (mins) with binwidth=1')
 
         c = np.arange(0, 200, 1)
         c1 = np.arange(0, 200, 5)
 
-        ax=sns.displot(data=dataset, x=f"question_length",  kind="hist", bins=c,hue=hue)
-        ax.set_xlabels('question length with binwidth=1')
-        ax=sns.displot(data=dataset, x=f"question_length",  kind="hist", bins=c1, hue=hue)
-        ax.set_xlabels('question length with binwidth=5')
+        ax=sns.histplot(data=dataset, x=f"question_length", bins=c,hue=hue, ax=axs[2])
+        #ax.set_xlabels('question length with binwidth=1')
+        ax=sns.histplot(data=dataset, x=f"question_length", bins=c1, hue=hue, ax=axs[3])
+        #ax.set_xlabels('question length with binwidth=5')
 
 
-        ax=sns.displot(data=dataset, x=f"answer_length",  kind="hist", bins=c,hue=hue)
-        ax.set_xlabels('answer length with binwidth=1')
-        ax=sns.displot(data=dataset, x=f"answer_length",  kind="hist", bins=c1,hue=hue)
-        ax.set_xlabels('answer length with binwidth=5')
+        ax=sns.histplot(data=dataset, x=f"answer_length", bins=c,hue=hue, ax=axs[4])
+        #ax.set_xlabels('answer length with binwidth=1')
+        ax=sns.histplot(data=dataset, x=f"answer_length", bins=c1,hue=hue, ax=axs[5])
+        #ax.set_xlabels('answer length with binwidth=5')
 
         d= np.arange(0, 60, 1)
         e= np.arange(0, 50, 1) # take random sampling of 50
-        ax=sns.displot(data=dataset, x=f"answerer_id",  kind="hist", bins=d, hue=hue)
-        ax=sns.displot(data=dataset, x=f"student_poster_id",  kind="hist", bins=e, hue=hue)
+        ax=sns.histplot(data=dataset, x=f"answerer_id", bins=d, hue=hue, ax=axs[6])
+        ax=sns.histplot(data=dataset, x=f"student_poster_id", bins=e, hue=hue, ax=axs[7])
+
+        if save_path:
+            save_path += "_continuous"
+            print(f'saving to {save_path}')
+            fig.savefig(save_path)
 
     
+
+    def save_distributions(self, hue_name=None):
+
+        if not os.path.exists(self.img_save_path):
+            os.makedirs(self.img_save_path)      
+
+        for s in ['train', 'val', 'test']:
+            path = self.img_save_path + f'{s}' + f"_{hue_name}"
+            self.plot_discrete_distributions(s, save_path=path, hue=hue_name)
+            self.plot_continuous_distributions(s, save_path=path, hue=hue_name)
+
+
 
     def print_stats(self):
         print(f'Printing split info:')
@@ -201,14 +219,17 @@ class DataSet():
         print(f"Continuous features are {self.continuous_features}")
         print(f"Discrete features are {self.discrete_features}")
 
+        # compute student overlap distribution
+
         print()
         print()
+
 
 '''
 1000 students in total
 50% 25% 25% train val test split
 '''
-def split_dataset(dataset, continuous_features, student_biased=False):
+def split_dataset(dataset, continuous_features, dataset_name, student_biased=False):
     y_train = dataset['is_helpful']
     X_train = dataset.drop(labels=["is_helpful"], axis=1)
     X_train, X_test, y_train, y_test = train_test_split(X_train, y_train, test_size=0.25, random_state=0)
@@ -222,7 +243,7 @@ def split_dataset(dataset, continuous_features, student_biased=False):
     X_test['is_helpful'] = y_test
     X_val['is_helpful'] = y_val
 
-    return DataSet(X_train, X_val, X_test, continuous_features)
+    return DataSet(X_train, X_val, X_test, continuous_features, dataset_name)
 
 
 
@@ -240,8 +261,8 @@ def main(args):
     combined_data = pd.concat([fall2019_data, fall2020_data, fall2021_data], ignore_index=True)
     combined_data = combined_data.sample(frac=1, random_state=0)
 
-    student_biased_dataset = split_dataset(combined_data, continuous_features)
-    student_unbiased_dataset = DataSet(fall2020_data, fall2019_data, fall2021_data, continuous_features)
+    student_biased_dataset = split_dataset(combined_data, continuous_features, 'biased_dataset')
+    student_unbiased_dataset = DataSet(fall2020_data, fall2019_data, fall2021_data, continuous_features, 'unbiased_dataset')
 
     student_biased_dataset.print_stats()
     student_unbiased_dataset.print_stats()
@@ -252,7 +273,7 @@ def main(args):
     
 
     #print(df[df.index.duplicated()])
-    student_biased_dataset.plot_discrete_distributions(hue='is_helpful')
+    student_unbiased_dataset.save_distributions(hue_name=None)
 
 
 
