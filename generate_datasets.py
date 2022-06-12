@@ -10,6 +10,7 @@ Options:
 Improvements:
 
 """
+from functools import partial
 import ssl
 from docopt import docopt
 
@@ -42,6 +43,10 @@ import seaborn as sns
 from seaborn import FacetGrid
 import nltk
 
+from sklearn.feature_selection import SelectKBest
+from sklearn.feature_selection import mutual_info_classif
+from sklearn.feature_selection import chi2
+from sklearn.feature_selection import f_classif
 from sklearn.model_selection import train_test_split
 
 from nptyping import NDArray, Int, Shape
@@ -86,7 +91,7 @@ can further use statistical tests to see if they improve performance
 class DataSet():
     """"""
     
-    def __init__(self, train, val, test, continuous_features, name):
+    def __init__(self, train, val, test, continuous_features, name, ignore_features={'post_id', 'student_poster_id', 'answerer_id'}):
 
         self.name = name
         self.dataset_save_path = DATASET_DIR + self.name + "/"
@@ -95,18 +100,27 @@ class DataSet():
         self.train:DataFrame = train
         self.val:DataFrame = val
         self.test:DataFrame = test
+
+        self.train_pruned = None
+        self.val_pruned = None
+        self.test_pruned = None
+
         self.continuous_features:set = continuous_features
         self.discrete_features:set = set()
+        self.ignore_features = ignore_features
+        self.target = 'is_helpful'
 
 
         self.features:list = train.keys()
         
         for f in self.features:
-            if f not in self.continuous_features:
+            if (f not in self.continuous_features) and (f not in self.ignore_features):
                 self.discrete_features.add(f)
 
+        #print(f'discrete features are {self.discrete_features}')
 
-    def plot_discrete_distributions(self, set_type: str = 'train', hue=None, save_path=None) -> None:
+
+    def __plot_discrete_distributions(self, set_type: str = 'train', hue=None, save_path=None) -> None:
         """
         :param hue: None, is_helpful, set where set indicates the type of dataset
         :param continuous_features: Set of features to exclude from the plot.
@@ -141,7 +155,9 @@ class DataSet():
             print(f'saving to {save_path}')
             fig.savefig(save_path)
 
-    def plot_continuous_distributions(self, set_type: str = 'train', hue=None, save_path=None) -> None:
+
+
+    def __plot_continuous_distributions(self, set_type: str = 'train', hue=None, save_path=None) -> None:
 
         if set_type == 'train':
             dataset = self.train
@@ -195,7 +211,6 @@ class DataSet():
             fig.savefig(save_path)
 
     
-
     def save_distributions(self, hue_name=None):
 
         if not os.path.exists(self.img_save_path):
@@ -203,9 +218,110 @@ class DataSet():
 
         for s in ['train', 'val', 'test']:
             path = self.img_save_path + f'{s}' + f"_{hue_name}"
-            self.plot_discrete_distributions(s, save_path=path, hue=hue_name)
-            self.plot_continuous_distributions(s, save_path=path, hue=hue_name)
+            self.__plot_discrete_distributions(s, save_path=path, hue=hue_name)
+            self.__plot_continuous_distributions(s, save_path=path, hue=hue_name)
 
+
+    def prune_features(self, select_k_best, save_path=None):
+
+        self.__prune_features(select_k_best, score_func=mutual_info_classif, save_path=True)
+        self.__prune_features(select_k_best, score_func=chi2, save_path=True)
+        self.__prune_features(select_k_best, score_func=f_classif, save_path=True)
+
+
+    def __prune_features(self, select_k_best='all', seed=0, score_func=mutual_info_classif, save_path=None):
+
+
+        features = self.features
+        # ** Make deep copies if necessary **
+        self.train_pruned = self.train.copy(deep=True)
+        self.val_pruned = self.val.copy(deep=True)
+        self.test_pruned = self.test.copy(deep=True)
+
+        if score_func == chi2:
+            print('Pruning based on chi2')
+            self.train_pruned = self.train_pruned.drop(list(self.continuous_features) + list(self.ignore_features), axis=1, errors='ignore')
+
+        elif score_func == f_classif:
+            print('Pruning based on anova')
+            y_train = self.train_pruned['is_helpful']
+            self.train_pruned = self.train_pruned.drop(list(self.discrete_features) + list(self.ignore_features), axis=1, errors='ignore')
+            self.train_pruned['is_helpful'] = y_train
+    
+        elif score_func == mutual_info_classif:
+            print('Pruning based on mutual information')
+        else:
+            assert(1 == 0)
+
+        y_train = self.train_pruned['is_helpful']
+        X_train = self.train_pruned.drop(labels=["is_helpful"], axis=1)
+
+        y_val = self.val_pruned['is_helpful']
+        y_test = self.test_pruned['is_helpful']
+
+        features = list(X_train.keys())
+
+
+        print(f'features to be filtered are: {features}')
+
+        if select_k_best == 'all' or select_k_best > len(features):
+            select_k_best = len(features)
+
+        print(f'k = {select_k_best}')
+
+        discrete_indices = list(range(0, len(features)))
+        for f in self.continuous_features:
+            if f in features:
+                discrete_indices.remove(features.index(f))
+
+        
+        if score_func == mutual_info_classif:
+            score_func = partial(mutual_info_classif, discrete_features=discrete_indices, random_state=seed)
+
+
+        select_k = SelectKBest(score_func, k=select_k_best).fit(X_train, y_train)
+        scores = select_k.scores_
+        support = select_k.get_support()
+
+        scores = scores.tolist()
+
+
+        if save_path:
+            save_path = self.img_save_path
+
+            plot_type = 'mi'
+            if score_func == chi2:
+                plot_type = 'chi2'
+
+            if score_func == f_classif:
+                plot_type = 'anova'
+
+
+            fig, axs = plt.subplots(1)
+            fig.set_size_inches(10, 10)
+            sns.barplot(x=list(range(0, len(features))), y=scores, ax=axs)
+
+            save_path += "train_" + f"{plot_type}" + "_scores"
+            print(f'saving to {save_path}')
+            fig.savefig(save_path)
+
+
+        features = np.array(features)
+        feature_indices = np.where(support)[0]
+        feature_names:ndarray = features[feature_indices]
+
+        print(f'chosen features are {feature_names}')
+        print(f'feature indices are {feature_indices}')
+
+        # augment self.train_pruned, self.val_pruned, self.test_pruned
+        np.append(feature_names, 'is_helpful')  # append is_helpful so it gets added to train/val/test
+
+        self.train_pruned = self.train_pruned[feature_names]
+        self.val_pruned = self.val_pruned[feature_names]
+        self.test_pruned = self.test_pruned[feature_names]
+
+        print('\n\n\n')
+    
 
 
     def print_stats(self):
@@ -218,11 +334,14 @@ class DataSet():
 
         print(f"Continuous features are {self.continuous_features}")
         print(f"Discrete features are {self.discrete_features}")
+        print(f"Ignored features are {self.ignore_features}")
 
         # compute student overlap distribution
 
         print()
         print()
+
+
 
 
 '''
@@ -255,7 +374,9 @@ def main(args):
     fall2020_data = pd.read_csv(DATASET_DIR+'csc108_fall2020_aug.csv').drop(labels=["ID","post_id"], axis=1)
     fall2021_data = pd.read_csv(DATASET_DIR+'csc108_fall2021_aug.csv').drop(labels=["ID","post_id"], axis=1)
 
-    continuous_features = {'question_length', 'answer_length', 'response_time', 'post_id', 'student_poster_id', 'answerer_id'}
+    # features to exclude from discrete features plot
+    #continuous_features = {'question_length', 'answer_length', 'response_time', 'post_id', 'student_poster_id', 'answerer_id'}
+    continuous_features = {'question_length', 'answer_length', 'response_time'}
 
 
     combined_data = pd.concat([fall2019_data, fall2020_data, fall2021_data], ignore_index=True)
@@ -266,14 +387,11 @@ def main(args):
 
     student_biased_dataset.print_stats()
     student_unbiased_dataset.print_stats()
-
-    #df[df.index.duplicated()]
-    
-    #df = student_biased_dataset.train
-    
-
-    #print(df[df.index.duplicated()])
     student_unbiased_dataset.save_distributions(hue_name=None)
+
+    student_unbiased_dataset.prune_features(select_k_best=6)
+
+    
 
 
 
