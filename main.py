@@ -19,16 +19,19 @@ from model import *
 
 def prediction_pipeline(dataset: DataSet):
 
-    print(f'RUNNING PIPELINE ON: {dataset.name}')
+    # print(f'RUNNING PIPELINE ON: {dataset.name}')
 
-    #dataset.print_stats()
-    #dataset.save_distributions(hue_name=None)
-    #dataset.save_distributions(hue_name='is_helpful')
-    #dataset.prune_features(select_k_best=6)
+    # dataset.print_stats()
+    # dataset.save_distributions(hue_name=None)
+    # dataset.save_distributions(hue_name='is_helpful')
+    # dataset.prune_features(select_k_best=6)
 
     # print(f"PERFORMING MODELING ON {dataset.name}")
-    random_forest_classification(dataset, print_summary=True, tune=True, log_path=dataset.scores_save_path)
-    random_forest_classification(dataset, print_summary=True, tune=False, log_path=dataset.scores_save_path)
+
+    # random_forest_classification(dataset, print_summary=True, tune=True, log_path=dataset.scores_save_path)
+    # random_forest_classification(dataset, print_summary=True, tune=False, log_path=dataset.scores_save_path)
+
+    baseline(dataset, log_path=dataset.scores_save_path)
 
 
 
@@ -58,9 +61,9 @@ def main(args):
 
 
     prediction_pipeline(student_unbiased_dataset)
-    prediction_pipeline(student_biased_dataset)
-    prediction_pipeline(student_unbiased_dataset_no_ids)
-    prediction_pipeline(student_biased_dataset_no_ids)
+    #prediction_pipeline(student_biased_dataset)
+    #prediction_pipeline(student_unbiased_dataset_no_ids)
+    #prediction_pipeline(student_biased_dataset_no_ids)
 
     
 
