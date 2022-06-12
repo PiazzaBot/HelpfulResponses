@@ -99,6 +99,7 @@ class DataSet():
         self.name = name
         self.dataset_save_path = DATASET_DIR + self.name + "/"
         self.img_save_path = IMG_DIR + self.name + "/"
+        self.scores_save_path = self.img_save_path + 'scores' + '/'
 
         self.train:DataFrame = train
         self.val:DataFrame = val
@@ -231,8 +232,10 @@ class DataSet():
 
         d= np.arange(0, 60, 1)
         e= np.arange(0, 50, 1) # take random sampling of 50
-        ax=sns.histplot(data=dataset, x=f"answerer_id", bins=d, hue=hue, ax=axs[6])
-        ax=sns.histplot(data=dataset, x=f"student_poster_id", bins=e, hue=hue, ax=axs[7])
+
+        if 'student_poster_id' in self.features:
+            ax=sns.histplot(data=dataset, x=f"answerer_id", bins=d, hue=hue, ax=axs[6])
+            ax=sns.histplot(data=dataset, x=f"student_poster_id", bins=e, hue=hue, ax=axs[7])
 
         if save_path:
             save_path += "_continuous"
@@ -412,47 +415,3 @@ def split_dataset(dataset, continuous_features, dataset_name, student_biased=Fal
     return DataSet(X_train, X_val, X_test, continuous_features, dataset_name)
 
 
-
-    
-
-
-def main(args):
-    fall2019_data = pd.read_csv(DATASET_DIR+'csc108_fall2019_aug.csv').drop(labels=["ID","post_id"], axis=1)
-    fall2020_data = pd.read_csv(DATASET_DIR+'csc108_fall2020_aug.csv').drop(labels=["ID","post_id"], axis=1)
-    fall2021_data = pd.read_csv(DATASET_DIR+'csc108_fall2021_aug.csv').drop(labels=["ID","post_id"], axis=1)
-
-    # features to exclude from discrete features plot
-    #continuous_features = {'question_length', 'answer_length', 'response_time', 'post_id', 'student_poster_id', 'answerer_id'}
-    continuous_features = {'question_length', 'answer_length', 'response_time'}
-
-
-    combined_data = pd.concat([fall2019_data, fall2020_data, fall2021_data], ignore_index=True)
-    combined_data = combined_data.sample(frac=1, random_state=0)
-
-    combined_data_no_ids = combined_data.drop(labels=["student_poster_id", "answerer_id"], axis=1)
-
-    student_random_dataset = split_dataset(combined_data, continuous_features, 'random_dataset')
-    student_unbiased_dataset = DataSet(fall2020_data, fall2019_data, fall2021_data, continuous_features, 'unbiased_dataset')
-
-
-    student_random_dataset_no_ids = split_dataset(combined_data_no_ids, continuous_features, 'random_dataset_no_ids')
-    student_unbiased_dataset_no_ids = DataSet(fall2020_data.drop(labels=["student_poster_id", "answerer_id"], axis=1), 
-    fall2019_data.drop(labels=["student_poster_id", "answerer_id"], axis=1), fall2021_data.drop(labels=["student_poster_id", "answerer_id"], axis=1), 
-    continuous_features, 'unbiased_dataset_no_ids')
-
-
-
-    # student_random_dataset.print_stats()
-    # student_unbiased_dataset.print_stats()
-    # student_unbiased_dataset.save_distributions(hue_name=None)
-
-    # student_unbiased_dataset.prune_features(select_k_best=6)
-
-    
-
-
-
-if __name__ == "__main__":
-    arguments = docopt(__doc__)
-    print(arguments)
-    main(arguments)

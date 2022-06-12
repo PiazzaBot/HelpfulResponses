@@ -21,6 +21,8 @@ import matplotlib.pyplot as plt
 
 from generate_datasets import DataSet
 
+import os
+
 
 
 train_path = 'datasets/train'
@@ -28,8 +30,18 @@ val_path = 'datasets/val'
 test_path = 'datasets/test'
 
 
+def plot_val_logs(logs, save_dir):
+    plt.figure(figsize=(10, 5))
+    plt.plot(logs["score"], label="current trial")
+    plt.plot(logs["score"].cummax(), label="best trial")
+    plt.xlabel("Tuning step")
+    plt.ylabel("Tuning score")
+    plt.legend()
+    
+    plt.savefig(save_dir + 'val.png')
 
-def plot_logs(logs, save_file):
+
+def plot_train_logs(logs, save_dir):
     plt.figure(figsize=(12, 4))
 
     plt.subplot(1, 2, 1)
@@ -42,10 +54,12 @@ def plot_logs(logs, save_file):
     plt.xlabel("Number of trees")
     plt.ylabel("Logloss (out-of-bag)")
 
-    plt.savefig(save_file)
+    print(f'SAVING LOGS to {save_dir + "train.png"}')
+
+    plt.savefig(save_dir + 'train.png')
 
 
-def classify(train, val, test, model, tuned=False, print_summary=False, plot_logs=False):
+def classify(train, val, test, model, log_path=None, tuned=False, print_summary=False):
 
     model.fit(x=train, validation_data=val)
     print(f'number of training examples {model.num_training_examples}')
@@ -67,14 +81,20 @@ def classify(train, val, test, model, tuned=False, print_summary=False, plot_log
         tuned_logs = model.make_inspector().tuning_logs()
         #print(tuned_logs)
 
-    if plot_logs:
-        plot_logs(train_logs, 'train_logs.png')
+    if log_path:
+        dirname = os.path.dirname(log_path)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)  
+        plot_train_logs(train_logs, log_path)
+
+        if tuned:
+            plot_val_logs(tuned_logs, log_path)
     
 
     #tfdf.model_plotter.plot_model_in_colab(rf_model, tree_idx=0, max_depth=3)
 
 
-def random_forest_classification(dataset:DataSet):
+def random_forest_classification(dataset:DataSet, print_summary=False, log_path="", tune=False):
 
     train_pd, val_pd, test_pd = dataset.train, dataset.val, dataset.test
 
@@ -112,8 +132,10 @@ def random_forest_classification(dataset:DataSet):
     assert(rf_model._check_dataset == True)
 
 
-    classify(train_tf, val_tf, test_tf, rf_model, tuned=False)
-    #classify(train_tf, val_tf, test_tf, rf_tuned_model, tuned=True)
+
+    classify(train_tf, val_tf, test_tf, rf_model, log_path, tuned=False, print_summary=print_summary)
+    if tune:
+        classify(train_tf, val_tf, test_tf, rf_tuned_model, log_path, tuned=True, print_summary=print_summary)
 
     
 
