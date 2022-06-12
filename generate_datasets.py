@@ -213,6 +213,8 @@ class DataSet():
     
     def save_distributions(self, hue_name=None):
 
+        print('SAVING DISCRETE AND CONTINUOUS DISTRIBUTIONS')
+
         if not os.path.exists(self.img_save_path):
             os.makedirs(self.img_save_path)      
 
@@ -220,6 +222,8 @@ class DataSet():
             path = self.img_save_path + f'{s}' + f"_{hue_name}"
             self.__plot_discrete_distributions(s, save_path=path, hue=hue_name)
             self.__plot_continuous_distributions(s, save_path=path, hue=hue_name)
+
+            print('\n\n')
 
 
     def prune_features(self, select_k_best, save_path=None):
@@ -393,11 +397,6 @@ def main(args):
 
     
 
-
-
-
-   
-        
 
 
 if __name__ == "__main__":
