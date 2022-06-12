@@ -76,7 +76,7 @@ def log_msg(filepath, msg, mode, summary=False):
         print(msg)
     sys.stdout.close()
     sys.stdout = stdout
-    
+
     # if summary:
     #     msg.summary()
     # else:
@@ -137,6 +137,44 @@ def classify(train, val, test, model, log_path=None, tuned=False, print_summary=
     #tfdf.model_plotter.plot_model_in_colab(rf_model, tree_idx=0, max_depth=3)
 
 
+def baseline(dataset:DataSet, log_path=""):
+    """Pick most common class in train set and use that to make predictions in the test set"""
+
+    log_path += 'baseline/test_scores.txt'
+
+    if log_path != "":
+        dirname = os.path.dirname(log_path)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)  
+
+    
+
+    train_pd, val_pd, test_pd = dataset.train, dataset.val, dataset.test
+
+    #print(train_pd.head())
+
+    num_helpful = len(train_pd[train_pd['is_helpful'] == 1])
+    num_unhelpful  = len(train_pd[train_pd['is_helpful'] == 0])
+
+    common_class = 1
+
+    if num_unhelpful > num_helpful:
+        common_class = 0
+
+    accuracy =  len(test_pd[test_pd['is_helpful'] == common_class]) / len(test_pd)
+
+
+
+    with open(log_path, 'w') as file:
+        file.write(f'num helpful: {num_helpful}\n')
+        file.write(f'num unhelpful: {num_unhelpful}\n')
+        file.write(f'most common class is: {common_class}\n')
+
+        file.write(f'accuracy is: {accuracy}\n')
+
+ 
+
+
 def random_forest_classification(dataset:DataSet, print_summary=False, log_path="", tune=False):
 
     if tune:
@@ -190,60 +228,6 @@ def random_forest_classification(dataset:DataSet, print_summary=False, log_path=
     
 
 
-
-
-def print_usage():
-    print('Usage: python3.9 model.py <dataset-type=default|mi|chi2|anova>')
         
-def main():
-
-    global train_path, val_path, test_path
-
-    if len(argv) != 2:
-        print_usage()
-        return False
-
-    # dataset_type = argv[1]
-    # if dataset_type == 'default':
-    #     train_path += '.csv'
-    #     val_path += '.csv'
-    #     test_path += '.csv'
-    # elif dataset_type == 'mi':
-    #     train_path += '_mi.csv'
-    #     val_path += '_mi.csv'
-    #     test_path += '_mi.csv'
-    # elif dataset_type == 'chi2':
-    #     train_path += '_chi2.csv'
-    #     val_path += '_chi2.csv'
-    #     test_path += '_chi2.csv'
-    # elif dataset_type == 'anova':
-    #     train_path += '_anova.csv'
-    #     val_path += '_anova.csv'
-    #     test_path += '_anova.csv'
-    # else: # shouldn't get here
-    #     assert(1 == 0)
-
-    # continuous_features = {'question_length', 'answer_length', 'response_time', 'post_id', 'student_poster_id', 'answerer_id', 'is_helpful'}
-
-    # train_pd = pd.read_csv(train_path)
-    # val_pd = pd.read_csv(val_path)
-    # test_pd = pd.read_csv(test_path)
 
 
-    # features = train_pd.keys()
-
-
-    # train_tf = tfdf.keras.pd_dataframe_to_tf_dataset(train_pd, label='is_helpful')
-    # val_tf = tfdf.keras.pd_dataframe_to_tf_dataset(val_pd, label='is_helpful')
-    # test_tf = tfdf.keras.pd_dataframe_to_tf_dataset(test_pd, label='is_helpful')
-
-    #plt.plot([1, 2, 3, 4])
-    #plt.ylabel('some numbers')
-    #plt.savefig("mygraph.png")
-    #random_forest_classification(train_pd, val_pd, test_pd, features, continuous_features)
-
-    
-
-
-if __name__ == "__main__":
-    main()
