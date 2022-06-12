@@ -30,18 +30,36 @@ def main(args):
     combined_data = pd.concat([fall2019_data, fall2020_data, fall2021_data], ignore_index=True)
     combined_data = combined_data.sample(frac=1, random_state=0)
 
+    combined_data_no_ids = combined_data.drop(labels=["student_poster_id", "answerer_id"], axis=1)
+
+
     student_unbiased_dataset = DataSet(fall2020_data, fall2019_data, fall2021_data, continuous_features, 'unbiased_dataset')
     student_biased_dataset = split_dataset(combined_data, continuous_features, 'biased_dataset')
+
+    student_biased_dataset_no_ids = split_dataset(combined_data_no_ids, continuous_features, 'biased_dataset_no_ids')
+    student_unbiased_dataset_no_ids = DataSet(fall2020_data.drop(labels=["student_poster_id", "answerer_id"], axis=1), 
+    fall2019_data.drop(labels=["student_poster_id", "answerer_id"], axis=1), fall2021_data.drop(labels=["student_poster_id", "answerer_id"], axis=1), 
+    continuous_features, 'unbiased_dataset_no_ids')
+
+    #student_biased_dataset_no_ids.print_stats()
 
     student_unbiased_dataset.print_stats()
     student_biased_dataset.print_stats()
    
 
-    student_unbiased_dataset.save_distributions(hue_name=None)
-    student_biased_dataset.save_distributions(hue_name=None)
+    # student_unbiased_dataset.save_distributions(hue_name=None)
+    # student_biased_dataset.save_distributions(hue_name=None)
 
-    student_unbiased_dataset.prune_features(select_k_best=6)
-    student_biased_dataset.prune_features(select_k_best=6)
+    # student_unbiased_dataset.prune_features(select_k_best=6)
+    # student_biased_dataset.prune_features(select_k_best=6)
+
+
+
+    #print(f"PERFORMING MODELING ON {student_unbiased_dataset.name}")
+    #random_forest_classification(student_unbiased_dataset)
+
+    #print(f"PERFORMING MODELING ON {student_biased_dataset.name}")
+    #random_forest_classification(student_biased_dataset)
 
     
 

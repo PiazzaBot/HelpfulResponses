@@ -19,6 +19,8 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
+from generate_datasets import DataSet
+
 
 
 train_path = 'datasets/train'
@@ -42,12 +44,15 @@ def plot_logs(logs, save_file):
 
     plt.savefig(save_file)
 
-def classify(train, val, test, model, tuned=False):
+
+def classify(train, val, test, model, tuned=False, print_summary=False, plot_logs=False):
 
     model.fit(x=train, validation_data=val)
     print(f'number of training examples {model.num_training_examples}')
     print(f'number of validation examples {model.num_validation_examples}')
-    #print(rf_model.summary())
+
+    if print_summary:
+        print(model.summary())
 
     model.compile(metrics=['accuracy'])
     evaluation = model.evaluate(test, return_dict=True)
@@ -56,24 +61,35 @@ def classify(train, val, test, model, tuned=False):
         print(f"{name}: {value:.4f}")
 
 
-    logs = model.make_inspector().training_logs()
+    train_logs = model.make_inspector().training_logs()
 
     if tuned:
         tuned_logs = model.make_inspector().tuning_logs()
         #print(tuned_logs)
 
-    #plot_logs(logs, 'train_logs.png')
+    if plot_logs:
+        plot_logs(train_logs, 'train_logs.png')
     
 
     #tfdf.model_plotter.plot_model_in_colab(rf_model, tree_idx=0, max_depth=3)
 
 
-def random_forest_classification(train, val, test, features, continuous_features):
+def random_forest_classification(dataset:DataSet):
+
+    train_pd, val_pd, test_pd = dataset.train, dataset.val, dataset.test
+
+    features:set = dataset.features
+    continuous_features:set = dataset.continuous_features
+    discrete_features:set = dataset.discrete_features
+    ignored_features:set = dataset.ignore_features
+
+    train_tf = tfdf.keras.pd_dataframe_to_tf_dataset(train_pd, label='is_helpful')
+    val_tf = tfdf.keras.pd_dataframe_to_tf_dataset(val_pd, label='is_helpful')
+    test_tf = tfdf.keras.pd_dataframe_to_tf_dataset(test_pd, label='is_helpful')
 
     categorical_features = []
 
-    for f in features:
-        if f not in continuous_features:
+    for f in discrete_features: #interprets ignored features as CATEGORICAL (correct semantics)
             tf_feature = tfdf.keras.FeatureUsage(name=f, semantic=tfdf.keras.FeatureSemantic.CATEGORICAL)
             categorical_features.append(tf_feature)
 
@@ -95,8 +111,9 @@ def random_forest_classification(train, val, test, features, continuous_features
 
     assert(rf_model._check_dataset == True)
 
-    classify(train, val, test, rf_model, tuned=False)
-    classify(train, val, test, rf_tuned_model, tuned=True)
+
+    classify(train_tf, val_tf, test_tf, rf_model, tuned=False)
+    #classify(train_tf, val_tf, test_tf, rf_tuned_model, tuned=True)
 
     
 
@@ -114,44 +131,44 @@ def main():
         print_usage()
         return False
 
-    dataset_type = argv[1]
-    if dataset_type == 'default':
-        train_path += '.csv'
-        val_path += '.csv'
-        test_path += '.csv'
-    elif dataset_type == 'mi':
-        train_path += '_mi.csv'
-        val_path += '_mi.csv'
-        test_path += '_mi.csv'
-    elif dataset_type == 'chi2':
-        train_path += '_chi2.csv'
-        val_path += '_chi2.csv'
-        test_path += '_chi2.csv'
-    elif dataset_type == 'anova':
-        train_path += '_anova.csv'
-        val_path += '_anova.csv'
-        test_path += '_anova.csv'
-    else: # shouldn't get here
-        assert(1 == 0)
+    # dataset_type = argv[1]
+    # if dataset_type == 'default':
+    #     train_path += '.csv'
+    #     val_path += '.csv'
+    #     test_path += '.csv'
+    # elif dataset_type == 'mi':
+    #     train_path += '_mi.csv'
+    #     val_path += '_mi.csv'
+    #     test_path += '_mi.csv'
+    # elif dataset_type == 'chi2':
+    #     train_path += '_chi2.csv'
+    #     val_path += '_chi2.csv'
+    #     test_path += '_chi2.csv'
+    # elif dataset_type == 'anova':
+    #     train_path += '_anova.csv'
+    #     val_path += '_anova.csv'
+    #     test_path += '_anova.csv'
+    # else: # shouldn't get here
+    #     assert(1 == 0)
 
-    continuous_features = {'question_length', 'answer_length', 'response_time', 'post_id', 'student_poster_id', 'answerer_id', 'is_helpful'}
+    # continuous_features = {'question_length', 'answer_length', 'response_time', 'post_id', 'student_poster_id', 'answerer_id', 'is_helpful'}
 
-    train_pd = pd.read_csv(train_path)
-    val_pd = pd.read_csv(val_path)
-    test_pd = pd.read_csv(test_path)
-
-
-    features = train_pd.keys()
+    # train_pd = pd.read_csv(train_path)
+    # val_pd = pd.read_csv(val_path)
+    # test_pd = pd.read_csv(test_path)
 
 
-    train_tf = tfdf.keras.pd_dataframe_to_tf_dataset(train_pd, label='is_helpful')
-    val_tf = tfdf.keras.pd_dataframe_to_tf_dataset(val_pd, label='is_helpful')
-    test_tf = tfdf.keras.pd_dataframe_to_tf_dataset(test_pd, label='is_helpful')
+    # features = train_pd.keys()
+
+
+    # train_tf = tfdf.keras.pd_dataframe_to_tf_dataset(train_pd, label='is_helpful')
+    # val_tf = tfdf.keras.pd_dataframe_to_tf_dataset(val_pd, label='is_helpful')
+    # test_tf = tfdf.keras.pd_dataframe_to_tf_dataset(test_pd, label='is_helpful')
 
     #plt.plot([1, 2, 3, 4])
     #plt.ylabel('some numbers')
     #plt.savefig("mygraph.png")
-    random_forest_classification(train_tf, val_tf, test_tf, features, continuous_features)
+    #random_forest_classification(train_pd, val_pd, test_pd, features, continuous_features)
 
     
 

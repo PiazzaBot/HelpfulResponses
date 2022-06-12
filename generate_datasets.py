@@ -49,6 +49,9 @@ from sklearn.feature_selection import chi2
 from sklearn.feature_selection import f_classif
 from sklearn.model_selection import train_test_split
 
+import tensorflow_decision_forests as tfdf
+import tensorflow as tf
+
 from nptyping import NDArray, Int, Shape
 from typing import Dict, List, Tuple, Union
 
@@ -106,7 +109,7 @@ class DataSet():
         self.test_pruned = None
 
         self.continuous_features:set = continuous_features
-        self.discrete_features:set = set()
+        self.discrete_features:set = set() # these will be spec as categorical in rf model
         self.ignore_features = ignore_features
         self.target = 'is_helpful'
 
@@ -114,10 +117,36 @@ class DataSet():
         self.features:list = train.keys()
         
         for f in self.features:
-            if (f not in self.continuous_features) and (f not in self.ignore_features):
+            if (f not in self.continuous_features) and (f not in self.ignore_features) and f != self.target: # ignore target in discrete features
                 self.discrete_features.add(f)
 
         #print(f'discrete features are {self.discrete_features}')
+
+        # convert categorical features to ints as opposed to floats
+
+        self.__convert_to_ints()
+
+
+
+    def __convert_to_ints(self):
+        """convert categorical features to ints as opposed to floats"""
+        for f in self.discrete_features:
+            self.train[f] = self.train[f].astype(int)
+            self.val[f] =  self.val[f].astype(int)
+            self.test[f] = self.test[f].astype(int)
+
+        self.train[self.target] = self.train[self.target].astype(int)
+        self.val[self.target] =  self.val[self.target].astype(int)
+        self.test[self.target] = self.test[self.target].astype(int)
+
+        #print(self.train.head())
+
+
+
+    def convert_to_tf_dataset(self):
+        self.train = tfdf.keras.pd_dataframe_to_tf_dataset(self.train, label='is_helpful')
+        self.val = tfdf.keras.pd_dataframe_to_tf_dataset(self.val, label='is_helpful')
+        self.test = tfdf.keras.pd_dataframe_to_tf_dataset(self.test, label='is_helpful')
 
 
     def __plot_discrete_distributions(self, set_type: str = 'train', hue=None, save_path=None) -> None:
@@ -329,7 +358,7 @@ class DataSet():
 
 
     def print_stats(self):
-        print(f'Printing split info:')
+        print(f'PRINTING SPLIT INFO:')
         print(f'# of Training examples: {len(self.train)}')
         print(f'# of Validation examples: {len(self.val)}')
         print(f'# of Test examples: {len(self.test)}')
@@ -341,6 +370,20 @@ class DataSet():
         print(f"Ignored features are {self.ignore_features}")
 
         # compute student overlap distribution
+
+        if 'student_poster_id' in self.features:
+
+            train_students = set(self.train['student_poster_id'].unique())
+            val_students = set(self.val['student_poster_id'].unique())
+            test_students = set(self.test['student_poster_id'].unique())
+
+
+            print(f'total number of students is: {len(train_students.union(val_students).union(test_students))}')
+
+            print(f'# of overlapping students in train and val: {len(train_students.intersection(val_students))}')
+            print(f'# of overlapping students in train and test: {len(train_students.intersection(test_students))}')
+
+
 
         print()
         print()
@@ -386,14 +429,24 @@ def main(args):
     combined_data = pd.concat([fall2019_data, fall2020_data, fall2021_data], ignore_index=True)
     combined_data = combined_data.sample(frac=1, random_state=0)
 
-    student_biased_dataset = split_dataset(combined_data, continuous_features, 'biased_dataset')
+    combined_data_no_ids = combined_data.drop(labels=["student_poster_id", "answerer_id"], axis=1)
+
+    student_random_dataset = split_dataset(combined_data, continuous_features, 'random_dataset')
     student_unbiased_dataset = DataSet(fall2020_data, fall2019_data, fall2021_data, continuous_features, 'unbiased_dataset')
 
-    student_biased_dataset.print_stats()
-    student_unbiased_dataset.print_stats()
-    student_unbiased_dataset.save_distributions(hue_name=None)
 
-    student_unbiased_dataset.prune_features(select_k_best=6)
+    student_random_dataset_no_ids = split_dataset(combined_data_no_ids, continuous_features, 'random_dataset_no_ids')
+    student_unbiased_dataset_no_ids = DataSet(fall2020_data.drop(labels=["student_poster_id", "answerer_id"], axis=1), 
+    fall2019_data.drop(labels=["student_poster_id", "answerer_id"], axis=1), fall2021_data.drop(labels=["student_poster_id", "answerer_id"], axis=1), 
+    continuous_features, 'unbiased_dataset_no_ids')
+
+
+
+    # student_random_dataset.print_stats()
+    # student_unbiased_dataset.print_stats()
+    # student_unbiased_dataset.save_distributions(hue_name=None)
+
+    # student_unbiased_dataset.prune_features(select_k_best=6)
 
     
 
