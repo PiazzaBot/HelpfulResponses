@@ -334,8 +334,8 @@ class DataSet():
 
 
             fig, axs = plt.subplots(1)
-            fig.set_size_inches(10, 10)
-            sns.barplot(x=list(range(0, len(features))), y=scores, ax=axs)
+            fig.set_size_inches(30, 10)
+            sns.barplot(x=features, y=scores, ax=axs)
 
             save_path += "train_" + f"{plot_type}" + "_scores"
             print(f'saving to {save_path}')
