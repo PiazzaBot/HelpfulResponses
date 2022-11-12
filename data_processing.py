@@ -36,9 +36,6 @@ from piazza_api.network import Network
 
 from data_processing_utils import *
 
-
-
-
 def export_posts_json(path:str, course:Network, max_iters='all') -> None:
     """
     Create json of all Piazza posts 
@@ -137,13 +134,12 @@ def json_to_csv(json_file_path: str, csv_filename: str, course: Network, is_over
 
 
 
-
 def main(args):
     cred_file_path = args['CRED-FILE']
     if args['scrapejson']:
         json_save_path = args['JSON-SAVE-FILEPATH']
         user_profile, course = login(cred_file_path)
-        export_posts_json(json_save_path, course, max_iters=10)
+        export_posts_json(json_save_path, course, max_iters='all')
      
     elif args['jsontocsv']:
         old = False

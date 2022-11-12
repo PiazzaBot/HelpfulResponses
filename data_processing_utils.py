@@ -83,7 +83,10 @@ def login(cred_filepath: str) -> Tuple[dict, Network]:
 def get_post_creator(post: Post):
     for entry in post['change_log']:
         if entry['type'] == 'create':
-            return entry['uid']
+            if 'uid' in entry:
+                return entry['uid']
+            else:
+                return None
 
 
 def get_post_created(post: Post):
@@ -124,6 +127,7 @@ def is_private(post: Post, is_old=False) -> bool:
 
     #print(json.dumps(post['change_log'], indent=4, sort_keys=True))
     for entry in post['change_log']:
+        print(entry)
         if entry['type'] == 'create':
             return True if entry['v'] == 'private' else False
 
@@ -143,7 +147,10 @@ def get_answers(post:Post, endorsed_students: Dict) -> List[Dict[str, Answer]]:
                 text = ans['history'][0]['content']
                 #text = strip_tags(text)
                 vals['text'] = text
-                vals['poster'] = ans['history'][0]['uid']
+                if 'uid' in ans['history'][0]:
+                    vals['poster'] = ans['history'][0]['uid']
+                else:
+                     vals['poster'] = None
                 vals['date'] = ans['history'][0]['created']
                 vals['num_helpful'] = len(ans['tag_endorse_arr'])
                 # post creator is same student that liked response
@@ -154,7 +161,11 @@ def get_answers(post:Post, endorsed_students: Dict) -> List[Dict[str, Answer]]:
 
                 if ans['type'] == "s_answer":
                     
-                    student_poster_id = ans['history'][0]['uid'] # id of the most recent student answer editor
+                    if 'uid' in ans['history'][0]:
+                        student_poster_id = ans['history'][0]['uid'] # id of the most recent student answer editor
+                    else:
+                        student_poster_id = None
+
                      # check if student is endorsed (actually not a valid way of checking)
                     vals['is_endorser'] = False
                     if student_poster_id in endorsed_students:
