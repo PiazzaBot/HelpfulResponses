@@ -44,6 +44,8 @@ def export_posts_json(path:str, course:Network, max_iters='all') -> None:
     :param max_iters: How many posts to save due to PiazzaAPI throttling
     """
 
+    print(f'Path is {path}')
+
     dir = os.path.dirname(path)
     if not os.path.exists(dir):
         os.makedirs(dir)
