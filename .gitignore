@@ -2,3 +2,4 @@
 *.csv
 piazza-api
 __pycache__/
+tmp.txt
