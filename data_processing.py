@@ -67,10 +67,63 @@ def export_posts_json(path:str, course:Network, max_iters='all') -> None:
             json.dump(all_posts, f)
 
 
+def json_to_csv_simple(json_file_path: str, csv_filename: str, course: Network, is_overwrite_csv: bool=False, is_old=False, strip_tags=True):
+    """ Use for accessing the api as a non-instructor
+
+    """
+
+    schema = ("post_id,question_title,question,folders,student_answer,instructor_answer\n")
+    parser = MyHTMLParser()
+
+    with open(json_file_path, 'r') as json_file:
+        with open(csv_filename, 'w') as csv_file:
+            csv_file.write(schema)
+            posts = json.load(json_file)
+            num_posts = 0
+            for post in tqdm(posts):   
+                row = [] 
+                if post['type'] == 'question':
+                    question = post['history'][0] # newest update of question. Change index to -1 for oldest
+                    # question_title = strip_tags(question['subject'])
+                    # question_content = strip_tags(question['content'])
+                    question_title = question['subject']
+                    question_content = question['content']
+                    
+                    folders = ','.join(post['folders'])
+                
+                    answers = get_answers_simple(post)
+                    student_answer = answers['s_answer']
+                    if student_answer:
+                        student_answer = student_answer['text']
+                    else:
+                        student_answer = 'N/A'
+
+                    instructor_answer = answers['i_answer']
+                    if instructor_answer:
+                        instructor_answer = instructor_answer['text']
+                    else:
+                        instructor_answer = 'N/A'
+
+                    if strip_tags:
+                        question_title, question_content, student_answer, instructor_answer = strip_tags(question_title), 
+                        strip_tags(question_content), strip_tags(student_answer), strip_tags(instructor_answer)
+
+                    row = [post['nr'], question_title, question_content, folders, student_answer, instructor_answer]
+
+
+                    post_writer = csv.writer(csv_file)
+                    post_writer.writerow(row)
+                    
+                    csv_file.write('\n')
+
+                    num_posts += 1
+
+
 
 
 def json_to_csv(json_file_path: str, csv_filename: str, course: Network, is_overwrite_csv: bool=False, is_old=False) -> None:
-    """ 
+    """ Use for accessing the api as an instructor
+
     :param json_file_path: Path to json file to convert to csv
     :param csv_filename: Name of csv file to save to cur directory
     :param course: Used to extract student profile to determine whether they are endorsed. **Actually not a valid way of checking**
@@ -83,9 +136,12 @@ def json_to_csv(json_file_path: str, csv_filename: str, course: Network, is_over
     "instructor_answer,instructor_answer_name,date_instructor_answer_posted,is_instructor_helpful," 
     "is_followup\n")
 
+
+
     parser = MyHTMLParser()
 
     endorsed_students = get_endorsed_students(course)[0]
+
 
     with open(json_file_path, 'r') as json_file:
         with open(csv_filename, 'w') as csv_file:
@@ -99,12 +155,14 @@ def json_to_csv(json_file_path: str, csv_filename: str, course: Network, is_over
                     question_title = question['subject']
                     question_content = question['content']
                     folders = ','.join(post['folders'])
+                    
                     date_created = get_post_created(post)
+
                     answers = get_answers(post, endorsed_students)
                     student_answer = answers['s_answer']
                     instructor_answer = answers['i_answer']
-                 
 
+                  
                     row = [post['nr'], is_private(post, is_old), question_title, question_content, folders, get_post_creator(post), date_created]
                     s_row, i_row = [], []
                     if student_answer:
@@ -150,7 +208,8 @@ def main(args):
         user_profile, course = login(cred_file_path)
         json_loadpath = args['JSON-LOAD-FILEPATH']
         csv_savepath = args['CSV-SAVE-FILEPATH']
-        json_to_csv(json_loadpath, csv_savepath, course, is_old=old)
+        #json_to_csv(json_loadpath, csv_savepath, course, is_old=old)
+        json_to_csv_simple(json_loadpath, csv_savepath, course, is_old=old)
     else:
         assert(1 == 0)
 

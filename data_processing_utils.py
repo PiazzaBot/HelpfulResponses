@@ -132,6 +132,22 @@ def is_private(post: Post, is_old=False) -> bool:
             return True if entry['v'] == 'private' else False
 
 
+def get_answers_simple(post:Post):
+    answers = {}
+    answers['s_answer'] = {}
+    answers['i_answer'] = {}
+
+    for t in answers.keys():
+        for ans in post['children']:
+            if ans['type'] == t:      
+                vals = answers[t]
+                text = ans['history'][0]['content']
+                #text = strip_tags(text)
+                vals['text'] = text
+    
+    return answers
+
+
 
 def get_answers(post:Post, endorsed_students: Dict) -> List[Dict[str, Answer]]:
     """ Get student and instructor answers """
